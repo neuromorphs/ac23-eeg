@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 """
+This script is adapted from:
+https://github.com/labstreaminglayer/pylsl/blob/master/pylsl/examples/ReceiveAndPlot.py
+
+The only change is using a QtWidgets objects instead of QtGui.
+Requirements:
+pyqtgraph, pyqt5
+
+Original comments:
 ReceiveAndPlot example for LSL
 
 This example shows data from all found outlets in realtime.
