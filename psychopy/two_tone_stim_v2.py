@@ -29,11 +29,12 @@ mov = visual.MovieStim(
     filename=r'/Users/3x10e8/Documents/GitHub/ac23-eeg/stim/two_tone/2s.mp4',
 )
 '''
+
 mov = visual.MovieStim(
     win,
     r'../stim/two_tone/2s.mp4',
     # path to video file
-    # size=(256, 256),
+    size=win.size,
     flipVert=False,
     flipHoriz=False,
     loop=False,
@@ -82,7 +83,7 @@ arrow_down = visual.ShapeStim(
 instructions.draw()
 win.flip()
 # Space bar press to start the experiment
-# event.waitKeys(keyList=['space'])
+event.waitKeys(keyList=['space'])
 
 if 0:
     #Show instructions
