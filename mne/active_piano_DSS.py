@@ -6,7 +6,7 @@ DENOISING
 # stream 0: impedance of EEG channels
 # stream 1: data of EEG channels
 # stream 2: glove data
-# stream 3: ev_st (??) --> video?
+# stream 3: output of event based camera
 # stream 4: MIDI stream
 # stream 5: audio stream
 
@@ -30,7 +30,6 @@ best_comp = np.mean(z[:, 0, :], -1)
 
 """
 
-
 import mne
 import matplotlib
 matplotlib.use("Qt5Agg")
@@ -38,6 +37,9 @@ import matplotlib.pyplot as plt
 import pyxdf
 import numpy as np
 import time
+from scipy.signal import butter, lfilter, iirnotch, filtfilt
+from meegkit import dss
+from meegkit.utils import fold, rms, tscov, unfold
 import librosa # optional, only needed to convert MIDI keys to notes
 
 # Set your datapath -- now this is for Claire's machine
@@ -103,4 +105,72 @@ for s in streams:
         print('shape:', lsl_streams[s_type]['data'].shape)
 
     print('=' * 50)
+
+plt.plot(eeg_data)
+plt.show()
+
+# preprocess eeg data
+# define filters
+def bandpass(signal,hp_freq,lp_freq,fs):
+    b,a = butter(1,[hp_freq,lp_freq],btype='bandpass',fs=fs)
+    signal = lfilter(b,a,signal)
+    return signal
+
+hp_freq = 0.5
+lp_freq = 40
+
+for ch in range(eeg_data.shape[-1]):
+    eeg_data[:, ch] = bandpass(eeg_data[:, ch], hp_freq, lp_freq, 500)
+
+fig = plt.plot(eeg_data)
+plt.show()
+
+
+# downsample both EEG and stream of interest for DSS denoising
+fs = 500
+new_fs = 100
+
+# which stream of interest? --> glove data
+DSS_stream = lsl_streams["imu_data"]["data"]
+plt.plot(DSS_stream)
+plt.show()
+
+print(f'Downsampling from {fs} Hz to {new_fs} Hz')
+new_shape = eeg_data.shape[0]*new_fs/fs
+old_shape = eeg_data.shape[0]
+eeg_data_rs = mne.filter.resample(eeg_data.astype('float64'), new_shape, old_shape, axis=0)
+
+# align small discrepancy between eeg and glove data
+DSS_stream = DSS_stream[0:eeg_data_rs.shape[0],]
+eeg_data_rs = eeg_data_rs[:,1:]
+DSS_stream_rep = np.tile(DSS_stream, (1, 6))
+
+# Conduct DSS
+# Compute original and biased covariance matrices
+c0, _ = tscov(eeg_data_rs)
+plt.imshow(c0, cmap=None, interpolation='nearest')
+plt.colorbar()
+plt.title("Covariance Matrix - EEG data")
+plt.show()
+
+
+# In this case the biased covariance is simply the covariance of the mean over
+# trials
+c1, _ = tscov(DSS_stream_rep)
+plt.imshow(c1, cmap=None, interpolation='nearest')
+plt.colorbar()
+plt.title("Covariance Matrix - Noise channel")
+plt.show()
+
+
+# Apply DSS
+todss, _, pwr0, pwr1 = dss.dss0(c0, c1)
+
+z = fold(np.dot(unfold(eeg_data_rs), todss), epoch_size=eeg_data_rs.shape[0])
+
+# Find best components
+best_comp = np.mean(z[:, 0, :], -1)
+
+plt.plot(best_comp)
+plt.show()
 
