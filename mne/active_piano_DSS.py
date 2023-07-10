@@ -148,7 +148,7 @@ DSS_stream_rep = np.tile(DSS_stream, (1, 6))
 # Conduct DSS
 # Compute original and biased covariance matrices
 c0, _ = tscov(eeg_data_rs)
-plt.imshow(c0, cmap=None, interpolation='nearest')
+plt.imshow(c0, cmap=None, interpolation=None)
 plt.colorbar()
 plt.title("Covariance Matrix - EEG data")
 plt.show()
@@ -157,15 +157,13 @@ plt.show()
 # In this case the biased covariance is simply the covariance of the mean over
 # trials
 c1, _ = tscov(DSS_stream_rep)
-plt.imshow(c1, cmap=None, interpolation='nearest')
+plt.imshow(c1, cmap=None, interpolation=None)
 plt.colorbar()
 plt.title("Covariance Matrix - Noise channel")
 plt.show()
 
-
 # Apply DSS
 todss, _, pwr0, pwr1 = dss.dss0(c0, c1)
-
 z = fold(np.dot(unfold(eeg_data_rs), todss), epoch_size=eeg_data_rs.shape[0])
 
 # Find best components
