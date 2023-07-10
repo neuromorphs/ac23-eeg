@@ -106,8 +106,25 @@ for s in streams:
 
     print('=' * 50)
 
-plt.plot(eeg_data)
-plt.show()
+# convert in EEG data into mne structure
+ch_types = []
+ch_types.extend(['eeg']*29) # first 29 channels are EEG
+ch_types.extend(['misc']*(1+2+3+1)) # A2 (assuming unused, ExG x2, ACC x3, Packet Counter)
+ch_types.extend(['stim']) # Trigger channel (probably unused)
+
+info = mne.create_info(
+    ch_names = eeg_ch_names,
+    sfreq = eeg_sfreq,
+    ch_types = ch_types,
+)
+raw = mne.io.RawArray(
+    data = eeg_data.T, # mne expects (n_channels, n_times)
+    info = info,
+)
+
+raw.info.set_montage('standard_1020', match_case=False)
+# visualize montage
+mne.viz.plot_montage(raw.info.get_montage())
 
 # preprocess eeg data
 # define filters
@@ -121,9 +138,6 @@ lp_freq = 40
 
 for ch in range(eeg_data.shape[-1]):
     eeg_data[:, ch] = bandpass(eeg_data[:, ch], hp_freq, lp_freq, 500)
-
-fig = plt.plot(eeg_data)
-plt.show()
 
 
 # downsample both EEG and stream of interest for DSS denoising
@@ -140,10 +154,14 @@ new_shape = eeg_data.shape[0]*new_fs/fs
 old_shape = eeg_data.shape[0]
 eeg_data_rs = mne.filter.resample(eeg_data.astype('float64'), new_shape, old_shape, axis=0)
 
+# find index of 6 auditory chans
+# auditory chans = ['Fz', 'Cz', 'Pz', 'Oz', 'C3', 'C4']
+aud_eeg_chans = [3, 11, 20, 9, 23, 8]
+
 # align small discrepancy between eeg and glove data
-DSS_stream = DSS_stream[0:eeg_data_rs.shape[0],]
-eeg_data_rs = eeg_data_rs[:,1:]
-DSS_stream_rep = np.tile(DSS_stream, (1, 6))
+DSS_stream = DSS_stream[50:eeg_data_rs.shape[0],]
+eeg_data_rs = eeg_data_rs[50:,aud_eeg_chans]
+#DSS_stream_rep = np.tile(DSS_stream, (1, 6))
 
 # Conduct DSS
 # Compute original and biased covariance matrices
@@ -153,10 +171,9 @@ plt.colorbar()
 plt.title("Covariance Matrix - EEG data")
 plt.show()
 
-
 # In this case the biased covariance is simply the covariance of the mean over
 # trials
-c1, _ = tscov(DSS_stream_rep)
+c1, _ = tscov(DSS_stream)
 plt.imshow(c1, cmap=None, interpolation=None)
 plt.colorbar()
 plt.title("Covariance Matrix - Noise channel")
