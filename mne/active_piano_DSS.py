@@ -133,15 +133,15 @@ def bandpass(signal,hp_freq,lp_freq,fs):
     signal = lfilter(b,a,signal)
     return signal
 
-hp_freq = 0.5
-lp_freq = 40
+hp_freq = 0.5 # Hz
+lp_freq = 40 # Hz
 
 for ch in range(eeg_data.shape[-1]):
     eeg_data[:, ch] = bandpass(eeg_data[:, ch], hp_freq, lp_freq, 500)
 
 
 # downsample both EEG and stream of interest for DSS denoising
-fs = 500
+fs = 500 # Hz
 new_fs = 100
 
 # which stream of interest? --> glove data
@@ -159,9 +159,8 @@ eeg_data_rs = mne.filter.resample(eeg_data.astype('float64'), new_shape, old_sha
 aud_eeg_chans = [3, 11, 20, 9, 23, 8]
 
 # align small discrepancy between eeg and glove data
-DSS_stream = DSS_stream[50:eeg_data_rs.shape[0],]
-eeg_data_rs = eeg_data_rs[50:,aud_eeg_chans]
-#DSS_stream_rep = np.tile(DSS_stream, (1, 6))
+DSS_stream = DSS_stream[100:eeg_data_rs.shape[0],]
+eeg_data_rs = eeg_data_rs[100:,aud_eeg_chans]
 
 # Conduct DSS
 # Compute original and biased covariance matrices
@@ -181,11 +180,42 @@ plt.show()
 
 # Apply DSS
 todss, _, pwr0, pwr1 = dss.dss0(c0, c1)
-z = fold(np.dot(unfold(eeg_data_rs), todss), epoch_size=eeg_data_rs.shape[0])
 
-# Find best components
-best_comp = np.mean(z[:, 0, :], -1)
-
-plt.plot(best_comp)
+# plot components explaining variance
+plt.figure(30)
+plt.clf()
+plt.plot(pwr1 / pwr0, '.-')
+plt.title('repeatability')
+plt.xlabel('component')
+plt.ylabel('score')
 plt.show()
+
+# which composants to keep?
+TOKEEP = [2,3,4,5]
+
+# reconstruct data in DSS space
+z = fold(np.dot(unfold(eeg_data_rs), todss), epoch_size=eeg_data_rs.shape[0])
+# Find best components --> remove the noise
+denoised_data = np.mean(z[:, TOKEEP, :], -1)
+
+# plot not denoised and denoised data
+fig, axs = plt.subplots(2, 1)  # 1 row, 2 columns
+# Plot data on the subplots
+axs[0].plot(eeg_data_rs)
+axs[0].set_title('eeg data w/o denoised')
+axs[0].set_xlabel('time')
+axs[0].set_ylabel('Amplitude')
+
+axs[1].plot(denoised_data)
+axs[1].set_title('denoised data - reconstruction DSS space')
+axs[1].set_xlabel('time')
+axs[1].set_ylabel('Amplitude')
+plt.show()
+
+# project back on sensor space
+fromdss = np.linalg.pinv(todss)
+# xx = fold(np.dot(unfold(eeg_data_rs), fromdss[NKEEP,:]), epoch_size=eeg_data_rs.shape[0])
+
+
+# plot ERPs with noised and denoised data
 
