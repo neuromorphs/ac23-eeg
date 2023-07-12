@@ -11,7 +11,7 @@ print("="*50)
 for s in streams:
     print(s.name(), s.type())
 
-
+'''
 # create a new inlet to read from the stream
 inlet = StreamInlet(streams[0])
 
@@ -21,4 +21,4 @@ while True:
     chunk, timestamps = inlet.pull_chunk()
     if timestamps:
         print(timestamps, chunk)
-
+'''
