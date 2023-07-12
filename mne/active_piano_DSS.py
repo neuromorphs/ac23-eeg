@@ -160,6 +160,15 @@ aud_eeg_chans = [3, 11, 20, 9, 23, 8]
 
 # align small discrepancy between eeg and glove data
 DSS_stream = DSS_stream[100:eeg_data_rs.shape[0],]
+DSS_stream_XX = DSS_stream/np.std(DSS_stream)
+
+# Define the desired shape of the array
+desired_shape = (81582, 29)
+num_cols_to_add = desired_shape[1] - DSS_stream.shape[1]
+
+# Pad the array with zeros
+DSS_stream_padded = np.pad(DSS_stream, [(0, 0), (0, num_cols_to_add)], mode='constant')
+
 eeg_data_rs = eeg_data_rs[100:,aud_eeg_chans]
 
 # Conduct DSS
@@ -193,29 +202,29 @@ plt.show()
 # which composants to keep?
 TOKEEP = [2,3,4,5]
 
-# reconstruct data in DSS space
-z = fold(np.dot(unfold(eeg_data_rs), todss), epoch_size=eeg_data_rs.shape[0])
+z = fold(np.dot(unfold(eeg_data_rs), todss[:,TOKEEP]), epoch_size=eeg_data_rs.shape[0])
+fromdss = np.linalg.pinv(todss)
 # Find best components --> remove the noise
-denoised_data = np.mean(z[:, TOKEEP, :], -1)
+denoised_data = fold(np.dot(unfold(z), fromdss[TOKEEP,:]), epoch_size=eeg_data_rs.shape[0])
+
 
 # plot not denoised and denoised data
-fig, axs = plt.subplots(2, 1)  # 1 row, 2 columns
+fig, axs = plt.subplots(3, 1)  # 1 row, 2 columns
 # Plot data on the subplots
 axs[0].plot(eeg_data_rs)
 axs[0].set_title('eeg data w/o denoised')
 axs[0].set_xlabel('time')
 axs[0].set_ylabel('Amplitude')
 
-axs[1].plot(denoised_data)
+axs[1].plot(denoised_data[:,:,0])
 axs[1].set_title('denoised data - reconstruction DSS space')
 axs[1].set_xlabel('time')
 axs[1].set_ylabel('Amplitude')
+
+axs[2].plot(denoised_data[:,:,0]- eeg_data_rs)
+axs[2].set_title('difference')
+axs[2].set_xlabel('time')
+axs[2].set_ylabel('Amplitude')
+
 plt.show()
-
-# project back on sensor space
-fromdss = np.linalg.pinv(todss)
-# xx = fold(np.dot(unfold(eeg_data_rs), fromdss[NKEEP,:]), epoch_size=eeg_data_rs.shape[0])
-
-
-# plot ERPs with noised and denoised data
 
