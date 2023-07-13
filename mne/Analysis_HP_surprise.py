@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Jul 11 08:43:05 2022
-Analyze Violin Data - TRF on envelope predicting video eeg data
-@author: cpelofi
-"""
 
 # TODO: look at other brain data, do we have more? Maybe record tomorrow? From Claire and Mahmoud? someone who doe snot speak french
 # TODO: check permutation method, could be better?
@@ -205,6 +200,15 @@ for repetition in range(permut_num):
 fig, (ax1, ax2) = plt.subplots(2)
 fig.set_size_inches(7, 7)
 fig.suptitle('standard and shuffle surprise')
-ax1.plot(surprise_eng)
-ax2.plot(shuff_surprise)
+ax1.plot(surprise_eng[1:1000,])
+ax2.plot(shuff_surprise[1:1000,])
 plt.show(block=True)
+
+nonzero_indices = np.nonzero(surprise_eng)[0]
+
+# Create a new shuffled time series array
+shuffled_time_series = np.zeros_like(surprise_eng)
+shuffled_time_series[shuffled_indices] = 1
+
+# Print the shuffled time series array
+print(shuffled_time_series)
