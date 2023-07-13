@@ -4,10 +4,13 @@ Created on Mon Jul 11 08:43:05 2022
 Analyze Violin Data - TRF on envelope predicting video eeg data
 @author: cpelofi
 """
+
+# TODO: look at other brain data, do we have more? Maybe record tomorrow? From Claire and Mahmoud? someone who doe snot speak french
+# TODO: check permutation method, could be better?
+# TODO: comapre with envelope, does that predict better?
+
 import sys
 sys.path.append("/Users/clairepelofi/Dropbox/Mac/Documents/GitHub/ac23-eeg/mne")
-# %%
-import eelbrain
 import numpy as np
 import pyxdf
 import os
@@ -19,7 +22,7 @@ import mne
 from boosting_toolbox2 import run_boosting, extract_trf_data
 from scipy.signal import hilbert, chirp
 from scipy.io import loadmat
-from random import shuffle
+from numpy.random import permutation
 matplotlib.use('Qt5Agg')
 plt.interactive(False)
 
@@ -52,7 +55,7 @@ def notch_filter(y, fs, notch_filter_frequencies):
     return y
 # %%
 
-filename = "/Users/clairepelofi/Library/CloudStorage/GoogleDrive-cp2830@nyu.edu/.shortcut-targets-by-id/1vf8-kB4CvShQ8yAy2DIw43NnEtVLNM3z/Telluride 2023 Shared/Topic Areas/AC23/DATA/HarryPotter Multilingual SingleSpeaker/eeg recordings/07-07-22/Will/hp/sub-will_ses-S001_task-Default_run-001_hp.xdf"
+filename = "/Users/clairepelofi/Library/CloudStorage/GoogleDrive-cp2830@nyu.edu/.shortcut-targets-by-id/1vf8-kB4CvShQ8yAy2DIw43NnEtVLNM3z/Telluride 2023 Shared/Topic Areas/AC23/DATA/HarryPotter Multilingual SingleSpeaker/eeg recordings/11-07-22/sub-shihab_ses-S001_task-Default_run-001_eeg-hp.xdf"
 print('Loading xdf file...')
 streams, header = pyxdf.load_xdf(filename) # this could take ~80 seconds..
 
@@ -127,6 +130,8 @@ eeg_data_rs = mne.filter.resample(epochs['english'].astype('float64'), new_shape
 # Open the file in read mode ('r')
 surprise_eng = np.loadtxt("/Users/clairepelofi/Library/CloudStorage/GoogleDrive-cp2830@nyu.edu/.shortcut-targets-by-id/1vf8-kB4CvShQ8yAy2DIw43NnEtVLNM3z/Telluride 2023 Shared/Topic Areas/AC23/DATA/HarryPotter Multilingual SingleSpeaker/surps/HPenglish_surps_100Hz.txt")
 
+# TRF ANALYSiS
+
 boosting_results = dict()
 
 print('Running Boosting')
@@ -144,7 +149,7 @@ channels = [a['label'] for a in eeg_stream['info']['desc'][0]['channels'][0]['ch
 # %% Figure
 fig, (ax1, ax2) = plt.subplots(2)
 fig.set_size_inches(7, 7)
-fig.suptitle('P001: VO Conditions Average TRF')
+fig.suptitle('Real model TRF and suprise HP')
 
 ax1.plot(t, trf_data.T,label=None)
 ax1.plot(t, trf_data.mean(0),'k--')
@@ -157,26 +162,49 @@ plt.show(block=True)
 
 
 # Run permutation model
-from numpy.random import permutation
-
 array_size = len(surprise_eng)
-num_pieces = 5  # Number of pieces you want to create
+fold = array_size  # Number of pieces you want to create
+permut_num = 10  # Number of repetitions for the permutation test
 
-# Generate a random permutation of indices
-indices = permutation(array_size)
+# Perform the permutation test
+for repetition in range(permut_num):
+    print(f"Iteration {repetition + 1}:")
+    print('---')
 
-# Split the array into pieces using the shuffled indices
-pieces = np.split(surprise_eng[indices], num_pieces)
+    indices = permutation(array_size)
+    pieces = np.split(surprise_eng[indices], fold)
+    pieces_array = [np.array(piece) for piece in pieces]
+    shuff_surprise = np.concatenate(pieces_array)
+
+    null_boosting_results = dict()
+
+    print('Running Boosting')
+    null_boosting_results = run_boosting(eeg_data_rs, shuff_surprise, new_fs)
+    print('---')
+
+    # %%
+    null_trf_data = null_boosting_results.h_scaled.x
+    null_corr = null_boosting_results.r.x
+    print(null_corr.max())
+
+    fig, (ax1, ax2) = plt.subplots(2)
+    fig.set_size_inches(7, 7)
+    fig.suptitle('Null model TRF and suprise HP')
+
+    ax1.plot(t, null_trf_data.T, label=None)
+    ax1.plot(t, null_trf_data.mean(0), 'k--')
+    ax1.set(xlabel='Time (ms)', ylabel='Amplitude (AU)')
+    ax1.legend(channels)
+    ax2.hist(null_corr)
+    ax2.set(xlabel='R-value', ylabel='# electrode')
+    plt.show(block=True)
 
 
 
-fig, (ax1, ax2) = plt.subplots(2,1)
+# %% Figure
+fig, (ax1, ax2) = plt.subplots(2)
 fig.set_size_inches(7, 7)
-fig.suptitle('normal and shuffled surprise')
-
-ax1.plot(surprise_eng,label=None)
-ax1.set(xlabel='time (s)', ylabel='surprise value')
-ax1.legend(channels)
-ax2.plot(shuff_surprise_eng)
-ax2.set(xlabel='time (s)', ylabel='surprise value')
+fig.suptitle('standard and shuffle surprise')
+ax1.plot(surprise_eng)
+ax2.plot(shuff_surprise)
 plt.show(block=True)
