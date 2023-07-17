@@ -110,11 +110,11 @@ trial_id = []
 for line in text:
     if 'C:' in line and 'trial_id' in line:
         trial_id.append(line.split('\\')[-1].split('.')[0][2:])
-# %%
+
 epochs = {}
 for i, [start_time, stop_time] in enumerate(zip(start_trigger, stop_trigger)):
     print(start_time, stop_time)
-    epochs[trial_id[i]] = (eeg_data[start_time:stop_time,:])
+    epochs[trial_id[i]] = (eeg_data[start_time:stop_time, :])
 
 new_fs = 100
 
