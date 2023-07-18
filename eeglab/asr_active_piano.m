@@ -5,14 +5,17 @@ addpath(genpath('../../eeglab/functions'));
 eeg_getversion()
 
 %% Import data
-filename = 'sub-matthias_ses-S001_task-Default_run-001_diverse_bpf_1-50Hz.mat';
-filepath = ['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse/', ... 
+%filename = 'sub-matthias_ses-S001_task-Default_run-001_diverse_bpf_1-50Hz.mat';
+%filepath = ['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse/', ... 
+%    filename];
+filename = 'sub-matthias_ses-S001_task-Default_run-001_diverse-wrong_bpf_1-50Hz.mat';
+filepath = ['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse-wrong/', ... 
     filename];
 load(filepath)
 
 %% Separate stim and EEG channels
 eeg = data(1:30, :); % 29 channels + A2
-stim = data(36, :);
+stim = data(end, :);
 
 %% View data and events (sanity check)
 eegplot(eeg, 'srate', srate, 'events', event)
@@ -21,9 +24,12 @@ eegplot(eeg, 'srate', srate, 'events', event)
 max(std(eeg(1:29, :)'))
 
 %% Manually drop bad channels from visual inspection
-eeg_chans = 1:30;
-%bad_chans = []; % don't drop any channels 
-bad_chans = [30, 29, 16]; % from visual inspection
+%eeg_chans = 1:30;
+%bad_chans = [30, 29, 16]; % from visual inspection on 'diverse'
+%chanlocs(bad_chans).labels
+
+eeg_chans = 1:30; % P7 already dropped
+bad_chans = [19]; % don't drop any channels 
 chanlocs(bad_chans).labels
 
 use_chans = eeg_chans;
@@ -56,8 +62,13 @@ baseline_data = eeg(:, calib_idx);
 
 %% Plot baseline data
 figure(2); clf;
-t = (0:length(data)-1)/srate; 
-plot(t(calib_idx), baseline_data(calib_idx)) % what are the units?
+t = (0:length(eeg)-1)/srate; 
+plot(t, eeg, 'k') % what are the units?
+hold on
+plot(t(calib_idx), baseline_data) % what are the units?
+xlabel('Time', 'FontSize',14)
+ylabel('Amplitude (uV)', 'FontSize',14)
+title('EEG Time Series (Entire Experiment)', 'FontSize', 18)
 
 %% Baseline time series
 eegplot(baseline_data, 'srate', srate)
@@ -77,7 +88,7 @@ eegplot(baseline_data, 'srate', srate)
 
 %% Run ASR calibration
 %cutoff,blocksize,B,A,window_len
-cutoff = 5;
+cutoff = 10;
 blocksize = [];
 B = [];
 A = [];
@@ -145,5 +156,8 @@ xlabel('Frequency (Hz)', 'FontSize', 12)
 ylabel('10log_{10}(µV^2/Hz)', 'FontSize', 12)
 
 %% Export cleaned EEG data
-save(['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse/', ... 
-    'after_asr.mat'], "clean_data", "t_clean_data")
+%save(['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse/', ... 
+%    'after_asr.mat'], "clean_data", "t_clean_data")
+
+save(['/Volumes/GoogleDrive/.shortcut-targets-by-id/1mvHxk9Ra9K7MmjQxaRYiZKwUw4Y8o841/AC23/DATA/active_piano/sub-matthias/ses-S001/diverse-wrong/', ... 
+    'after_asr_cutoff10.mat'], "clean_data", "t_clean_data")
