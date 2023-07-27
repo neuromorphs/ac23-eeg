@@ -169,7 +169,7 @@ ax1.set(xlabel='Time (ms)', ylabel='Amplitude (AU)')
 ax1.legend(channels)
 ax2.hist(corr)
 ax2.set(xlabel='R-value', ylabel='# electrode')
-# plt.show(block=True)
+plt.show(block=True)
 
 # %% Perform the permutation test
 permut_num = 100  # should be 100
